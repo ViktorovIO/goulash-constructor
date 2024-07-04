@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  php-fpm: &php
+    container_name: php-fpm
+    restart: always
+    build:
+      context: ./docker/php
+      args:
+        - PUID=${PUID}
+        - PGID=${PGID}
+    ports:
+      - '9000:9000'
+    volumes:
+      - ./:/var/www/goulash-test
+
+  nginx:
+    container_name: nginx
+    image: nginx:stable-alpine
+    restart: always
+    build:
+      context: ./docker/nginx
+    volumes:
+      - ./app:/var/www/goulash-test:rw
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php-fpm
+      - pgsql
+    ports:
+      - "80:80"
+
+  pgsql:
+    container_name: pgsql
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    env_file:
+      - .env.local
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/db/data:/var/lib/postgresql/data:rw
+#      - db-data:/var/lib/postgresql/data:rw
+
+volumes:
+  db-data:
+    driver: local
